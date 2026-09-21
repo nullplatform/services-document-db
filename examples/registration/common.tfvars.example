@@ -1,0 +1,42 @@
+# Copy to common.tfvars and fill in. Layers 1 and 2 read it:
+#   cd nullplatform            && tofu apply -var-file=../common.tfvars
+#   cd ../nullplatform-bindings && tofu apply -var-file=../common.tfvars
+#
+# Layer 0 (aws-requirements/) does NOT: it creates IAM in AWS and takes only a
+# cluster name, so it shares none of these variables. Apply it before both.
+#
+# np_api_key is deliberately NOT here. Export it instead:
+#   export TF_VAR_np_api_key="<key>"
+# .gitignore blocks *.tfvars and *.auto.tfvars precisely because tofu loads
+# the latter automatically and silently.
+
+nrn = "organization=<org-id>:account=<account-id>"
+
+# Must be a TAG of this repository, not a branch — the module rejects branches.
+service_repository_ref = "v0.1.0"
+
+# service_repository_token is only needed when the specs cannot be fetched
+# anonymously. The module reads them over HTTPS on every apply; if that fetch
+# requires authentication, supply a fine-grained token carrying
+# Contents: Read-only, passed by environment rather than written here, because
+# *.tfvars is gitignored but the value would still sit on disk:
+#   export TF_VAR_service_repository_token="<token>"
+# Otherwise leave it unset.
+
+# The registry and repository names default to where the release workflow
+# publishes (public.ecr.aws/nullplatform, services/documentdb-cluster and
+# services/documentdb-database). Override image_registry / *_image_repository
+# only if you host the images yourself.
+
+# Digests from the release, as sha256:<64 hex>.
+cluster_image_digest  = "sha256:..."
+database_image_digest = "sha256:..."
+
+# Bump on every release. A new digest under an unchanged version publishes
+# nothing new to running services.
+package_version = "0.1.0"
+
+# The agent must run with the matching flag: -tags "owner:lean"
+tags_selectors = {
+  owner = "lean"
+}
