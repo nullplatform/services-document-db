@@ -36,7 +36,10 @@ database_image_digest = "sha256:..."
 # nothing new to running services.
 package_version = "0.1.0"
 
-# The agent must run with the matching flag: -tags "owner:lean"
+# Whatever you put here, the agent must be started with the matching flag:
+#   tags_selectors = { owner = "platform" }  ->  np-agent -tags "owner:platform"
+# A mismatch delivers the notification and never executes it, and the service
+# still shows as active in the UI — so it looks like a hang, not a config error.
 tags_selectors = {
-  owner = "lean"
+  owner = "platform"
 }

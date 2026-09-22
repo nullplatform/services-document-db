@@ -6,9 +6,14 @@
 Dockerfile*
 README.md
 CHANGELOG.md
-# Never bake local terraform state or provider binaries into the image.
+# Never bake local terraform state, provider binaries or variable files into
+# the image. Both tfvars forms, mirroring .gitignore: the flow this repo itself
+# documents is common.tfvars.example -> common.tfvars under examples/, and
+# `COPY . /app/pkg` would bake that file — with the account NRN in it — into a
+# published image. *.tfvars.example is unaffected and still ships.
 **/.terraform
 **/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfstate.backup
+**/*.tfvars
 **/*.auto.tfvars

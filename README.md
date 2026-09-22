@@ -255,6 +255,29 @@ It does not cover DocumentDB — see "What the checks cover" above.
 
 ---
 
+## Deleting a cluster destroys its data
+
+There is no undo, and the form does not make that obvious.
+
+`deployment/main.tf` sets `skip_final_snapshot = true` and does not expose it,
+so deleting a `documentdb-cluster` service takes the cluster with it and leaves
+nothing behind. DocumentDB's **automated backups are deleted along with the
+cluster** — only a manual or final snapshot outlives it, and this service takes
+neither. The permissions role reflects that on purpose: it can describe and
+delete snapshots but has no `rds:CreateDBClusterSnapshot`, so editing
+`skip_final_snapshot` to `false` without also widening the policy fails the
+delete with a 403 rather than producing a snapshot.
+
+The trap is that `Backup Retention (days)` sits right next to it in the form,
+defaulting to 7, and reads like a week to change your mind. It is not: it is
+retention *while the cluster exists*.
+
+The guard that does work is **Deletion Protection**. It defaults to off, so turn
+it on for any cluster holding data you cannot lose — with it on, the delete
+action fails until someone deliberately turns it off.
+
+---
+
 ## Design decisions worth preserving
 
 Each of these looks like something to clean up, and each is load-bearing.

@@ -113,7 +113,7 @@
           "default": 7,
           "minimum": 1,
           "maximum": 35,
-          "description": "Days of automated backups to retain. DocumentDB has no zero-retention mode; the minimum is 1.",
+          "description": "Days of automated backups to retain, for recovery while the cluster exists. DocumentDB has no zero-retention mode; the minimum is 1. This is NOT a grace period on deletion: automated backups are deleted with the cluster, and this service takes no final snapshot, so deleting it destroys the data whatever this is set to. Turn on Deletion Protection for that.",
           "editableOn": ["create", "update"],
           "order": 4
         },

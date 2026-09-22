@@ -11,7 +11,7 @@ variable "np_api_key" {
 
 variable "tags_selectors" {
   type        = map(string)
-  description = "Tags that select which agent handles these services. The agent MUST be started with the matching -tags flag, e.g. tags_selectors = { owner = \"lean\" } requires -tags \"owner:lean\". A mismatch delivers the notification and never executes it — and the service still shows as active in the UI."
+  description = "Tags that select which agent handles these services. The agent MUST be started with the matching -tags flag, e.g. tags_selectors = { owner = \"platform\" } requires -tags \"owner:platform\". A mismatch delivers the notification and never executes it — and the service still shows as active in the UI."
 }
 
 variable "nullplatform_state_path" {

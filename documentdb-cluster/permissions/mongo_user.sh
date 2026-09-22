@@ -65,8 +65,18 @@ MASTER_CREDS=$(aws secretsmanager get-secret-value \
 MASTER_USER=$(echo "$MASTER_CREDS" | jq -r '.username')
 MASTER_PASS=$(echo "$MASTER_CREDS" | jq -r '.password')
 
+# Both fields, and checked here rather than left to fail later: jq prints the
+# string "null" for a missing key, so an absent .password reaches db.auth() as a
+# four-character password and comes back as an authentication failure — which
+# reads as wrong credentials, and sends whoever is debugging to the rotation or
+# the user, not to the secret that is missing a field.
 if [ -z "$MASTER_USER" ] || [ "$MASTER_USER" = "null" ]; then
-  echo "ERROR: could not read username from secret $SECRET_ARN" >&2
+  echo "ERROR: no username in secret $SECRET_ARN" >&2
+  exit 1
+fi
+
+if [ -z "$MASTER_PASS" ] || [ "$MASTER_PASS" = "null" ]; then
+  echo "ERROR: no password in secret $SECRET_ARN" >&2
   exit 1
 fi
 

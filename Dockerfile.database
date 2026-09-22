@@ -7,6 +7,12 @@
 #
 # One image per package: NP_PACKAGE_NAME takes a single value, so the two
 # services in this repo ship as two images built from the same context.
+# Pinned to 1.0.0 deliberately, not by neglect: it is Alpine 3.20, whose repos
+# carry node 20.15.1, and the mongosh install below is built around exactly that
+# (see the oidc-plugin override and why it exists). The reference services in
+# the org are on 1.1.1, which is Alpine 3.22 with node 22 — that base makes the
+# override unnecessary rather than breaking it, so the bump is a worthwhile
+# change on its own, with its own rebuild and its own re-run of the actions.
 FROM public.ecr.aws/nullplatform/scopes/worker-bridge:1.0.0
 
 # Tooling the workflows call (the bridge base stays minimal on purpose):
