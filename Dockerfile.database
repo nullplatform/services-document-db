@@ -7,13 +7,10 @@
 #
 # One image per package: NP_PACKAGE_NAME takes a single value, so the two
 # services in this repo ship as two images built from the same context.
-# Pinned to 1.0.0 deliberately, not by neglect: it is Alpine 3.20, whose repos
-# carry node 20.15.1, and the mongosh install below is built around exactly that
-# (see the oidc-plugin override and why it exists). The reference services in
-# the org are on 1.1.1, which is Alpine 3.22 with node 22 — that base makes the
-# override unnecessary rather than breaking it, so the bump is a worthwhile
-# change on its own, with its own rebuild and its own re-run of the actions.
-FROM public.ecr.aws/nullplatform/scopes/worker-bridge:1.0.0
+#
+# Alpine 3.22, so `apk add nodejs` below gets node 22 — which is what the mongosh
+# install needs. Same version the other reference services in the org run on.
+FROM public.ecr.aws/nullplatform/scopes/worker-bridge:1.1.1
 
 # Tooling the workflows call (the bridge base stays minimal on purpose):
 # aws + gomplate from apk. bash, jq, np, base64 and curl ship in the base.
@@ -36,22 +33,16 @@ RUN curl -fsSL "https://github.com/opentofu/opentofu/releases/download/v${TOFU_V
 # base. The npm package is plain JavaScript on top of node, so it is the only
 # form that works here without a glibc shim.
 #
-# The override is not optional either. mongosh pulls @mongodb-js/oidc-plugin
-# transitively, and its 2.x line requires node >= 20.19.2 AND is ESM-only —
-# while this base ships node 20.15.1, where `require()` of an ESM module is a
-# hard error. Alpine 3.20 has nothing newer that helps (nodejs-current is
-# 21.7.3, which predates the require(esm) backport). Pinning only the mongosh
-# version does not hold, because `npm install -g` resolves transitives fresh on
-# every build and drifts back to 2.x. Pinning the transitive dependency is what
-# actually makes the build reproducible.
+# The version is pinned so the build stays reproducible: npm resolves fresh on
+# every build otherwise, and mongosh reaches the cluster with the TLS and
+# replica-set settings this service depends on.
 #
-# Verified: mongosh 2.3.8 + oidc-plugin 1.1.8 runs on node 20.15.1.
-ARG MONGOSH_VERSION=2.3.8
-ARG OIDC_PLUGIN_VERSION=1.1.8
+# Verified: mongosh 2.12.0 on node 22.23.2.
+ARG MONGOSH_VERSION=2.12.0
 RUN apk add --no-cache nodejs npm \
     && mkdir -p /opt/mongosh \
-    && printf '{"name":"np-mongosh","private":true,"dependencies":{"mongosh":"%s"},"overrides":{"@mongodb-js/oidc-plugin":"%s"}}' \
-         "${MONGOSH_VERSION}" "${OIDC_PLUGIN_VERSION}" > /opt/mongosh/package.json \
+    && printf '{"name":"np-mongosh","private":true,"dependencies":{"mongosh":"%s"}}' \
+         "${MONGOSH_VERSION}" > /opt/mongosh/package.json \
     && cd /opt/mongosh \
     && npm install --omit=dev --no-audit --no-fund \
     && ln -sf /opt/mongosh/node_modules/.bin/mongosh /usr/local/bin/mongosh \
