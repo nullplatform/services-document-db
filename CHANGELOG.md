@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/nullplatform/services-document-db/compare/v0.1.0...v0.1.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **deps:** bump actions/checkout from 4 to 7 ([92a3422](https://github.com/nullplatform/services-document-db/commit/92a342219b909dd4a44940c3e2a036bed6f22e40))
+* **deps:** bump actions/checkout from 4 to 7 ([261a796](https://github.com/nullplatform/services-document-db/commit/261a7964d1e8610fe62338fb48105d6a468d5755))
+
 ## [0.1.0](https://github.com/nullplatform/services-document-db/compare/0.0.1...v0.1.0) (2026-09-22)
 
 
