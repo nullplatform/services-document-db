@@ -1,6 +1,6 @@
 name: release
 
-# One repo, TWO worker images (documentdb-cluster + documentdb-database), one
+# One repo, TWO worker images (document-db-cluster + document-db-database), one
 # chained run: release-please cuts the version once, the release-publish-oci
 # chain builds/pushes/registers the CLUSTER image, and a parallel pair of jobs
 # does the same for the DATABASE image against the same tag — both artifacts
@@ -36,7 +36,7 @@ jobs:
   release:
     uses: nullplatform/actions-nullplatform/.github/workflows/release-publish-oci.yml@v1
     with:
-      image_name: services/documentdb-cluster
+      image_name: agent-plugins/services/document-db-cluster
       dockerfile: Dockerfile.cluster
       # amd64 only, deliberately: the arm64 leg of the multi-arch default has
       # no consumer here and doubles the build.
@@ -50,14 +50,14 @@ jobs:
   # workflow file at a different ref made the run fail at startup; an inline
   # buildx job sidesteps it and mirrors what the chain's build does).
   publish_database:
-    name: Build & push documentdb-database
+    name: Build & push document-db-database
     needs: release
     if: ${{ !cancelled() && (needs.release.outputs.release_created == 'true' || inputs.existing_tag != '') }}
     runs-on: ubuntu-24.04
     outputs:
       image_digest: ${{ steps.build.outputs.digest }}
     env:
-      IMAGE: public.ecr.aws/nullplatform/services/documentdb-database
+      IMAGE: public.ecr.aws/nullplatform/agent-plugins/services/document-db-database
       TAG: ${{ inputs.existing_tag || needs.release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
       TAG: ${{ inputs.existing_tag || needs.release.outputs.tag_name }}
       DIGEST: ${{ needs.publish_database.outputs.image_digest }}
       ECR_REGISTRY: public.ecr.aws/nullplatform
-      IMAGE_NAME: services/documentdb-database
+      IMAGE_NAME: agent-plugins/services/document-db-database
     steps:
       - name: Register oci_image artifact (database)
         id: artifact
@@ -174,7 +174,7 @@ jobs:
           fi
 
           # shellcheck disable=SC2016
-          SECTION=$(printf '## Artifact (documentdb-database)\n\n|  |  |\n|---|---|\n| Image | `%s` |\n| Digest | `%s` |\n| Pinned reference | `%s` |\n| Artifact ID | `%s` |' \
+          SECTION=$(printf '## Artifact (document-db-database)\n\n|  |  |\n|---|---|\n| Image | `%s` |\n| Digest | `%s` |\n| Pinned reference | `%s` |\n| Artifact ID | `%s` |' \
             "$IMAGE:$TAG" "$DIGEST" "$IMAGE@$DIGEST" "$ID_ROW")
 
           BODY=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq '.body // ""')
