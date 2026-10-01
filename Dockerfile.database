@@ -10,7 +10,7 @@
 #
 # Alpine 3.22, so `apk add nodejs` below gets node 22 — which is what the mongosh
 # install needs. Same version the other reference services in the org run on.
-FROM public.ecr.aws/nullplatform/scopes/worker-bridge:1.1.1
+FROM public.ecr.aws/nullplatform/scopes/worker-bridge:2.0.1
 
 # Tooling the workflows call (the bridge base stays minimal on purpose):
 # aws + gomplate from apk. bash, jq, np, base64 and curl ship in the base.
