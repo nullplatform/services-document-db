@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/nullplatform/services-document-db/compare/v0.1.3...v0.1.4) (2026-10-02)
+
+
+### Bug Fixes
+
+* **deps:** bump docker/setup-buildx-action from 3 to 4 ([#5](https://github.com/nullplatform/services-document-db/issues/5)) ([302c4ee](https://github.com/nullplatform/services-document-db/commit/302c4eed6077831be714357e511646d8c3634cc1))
+
 ## [0.1.3](https://github.com/nullplatform/services-document-db/compare/v0.1.2...v0.1.3) (2026-10-02)
 
 
