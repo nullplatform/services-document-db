@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/nullplatform/services-document-db/compare/v0.1.4...v0.1.5) (2026-10-02)
+
+
+### Bug Fixes
+
+* **deps:** bump aws-actions/configure-aws-credentials from 4 to 6 ([#3](https://github.com/nullplatform/services-document-db/issues/3)) ([f87148f](https://github.com/nullplatform/services-document-db/commit/f87148fab03c01d6e5c2268b30c2e3e126ab5bac))
+
 ## [0.1.4](https://github.com/nullplatform/services-document-db/compare/v0.1.3...v0.1.4) (2026-10-02)
 
 
