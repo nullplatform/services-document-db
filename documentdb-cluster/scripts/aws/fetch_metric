@@ -1,0 +1,98 @@
+#!/bin/bash
+set -euo pipefail
+
+metric_config() {
+  case "$1" in
+  CPUUtilization) UNIT=percent STATISTIC=Average ;;
+  DatabaseConnections) UNIT=count STATISTIC=Maximum ;;
+  FreeableMemory) UNIT=bytes STATISTIC=Minimum ;;
+  VolumeBytesUsed) UNIT=bytes STATISTIC=Maximum ;;
+  OpcountersQuery) UNIT=count STATISTIC=Sum ;;
+  *) return 1 ;;
+  esac
+}
+
+iso_seconds_ago() {
+  local seconds="$1" epoch
+  epoch=$(($(date -u +%s) - seconds))
+  date -u -d "@${epoch}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -r "$epoch" +%Y-%m-%dT%H:%M:%SZ
+}
+
+require_timestamp() {
+  local name="$1" value="$2"
+  if [[ ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|\+00:00)$ ]]; then
+    echo "ERROR: ${name} '${value}' is not a UTC ISO 8601 timestamp." >&2
+    exit 1
+  fi
+}
+
+eval "$(printf '%s' "$CONTEXT" | jq -r '
+  (.arguments // {}) as $arguments
+  | ($arguments.service.attributes // {}) as $attributes
+  | @sh "METRIC=\($arguments.metric // "" | tostring)
+START_TIME=\($arguments.start_time // "" | tostring)
+END_TIME=\($arguments.end_time // "" | tostring)
+REQUESTED_PERIOD=\($arguments.period // "" | tostring)
+CLUSTER_IDENTIFIER=\($attributes.cluster_identifier // "" | tostring)
+REGION=\($attributes.endpoint // "" | tostring | [capture("\\.(?<region>[a-z]{2}(-[a-z]+)+-[0-9]+)\\.docdb\\.amazonaws\\.com(\\.cn)?$")] | .[0].region // "")"')"
+
+if ! metric_config "$METRIC"; then
+  echo "ERROR: unknown metric '${METRIC}'." >&2
+  exit 1
+fi
+
+PERIOD=60
+if [[ "$REQUESTED_PERIOD" =~ ^[0-9]+$ ]] && [ "$REQUESTED_PERIOD" -gt 60 ]; then
+  PERIOD=$(((REQUESTED_PERIOD + 59) / 60 * 60))
+fi
+
+if [ -z "$START_TIME" ] || [ -z "$END_TIME" ]; then
+  START_TIME=$(iso_seconds_ago 3600)
+  END_TIME=$(iso_seconds_ago 0)
+fi
+require_timestamp start_time "$START_TIME"
+require_timestamp end_time "$END_TIME"
+
+if [ -z "$CLUSTER_IDENTIFIER" ] || [ -z "$REGION" ]; then
+  RESULT=$(printf '{"metric":"%s","type":"gauge","period_in_seconds":%s,"unit":"%s","results":[]}' "$METRIC" "$PERIOD" "$UNIT")
+  echo "$RESULT"
+  exit 0
+fi
+
+if [[ ! "$CLUSTER_IDENTIFIER" =~ ^[A-Za-z][A-Za-z0-9-]{0,62}$ ]]; then
+  echo "ERROR: '${CLUSTER_IDENTIFIER}' is not a DocumentDB cluster identifier." >&2
+  exit 1
+fi
+
+if ! RESPONSE=$(aws cloudwatch get-metric-statistics \
+  --region "$REGION" \
+  --namespace AWS/DocDB \
+  --metric-name "$METRIC" \
+  --dimensions "Name=DBClusterIdentifier,Value=${CLUSTER_IDENTIFIER}" \
+  --start-time "$START_TIME" \
+  --end-time "$END_TIME" \
+  --period "$PERIOD" \
+  --statistics "$STATISTIC" \
+  --output json); then
+  echo "ERROR: CloudWatch rejected the ${METRIC} query for ${CLUSTER_IDENTIFIER} in ${REGION}." >&2
+  exit 1
+fi
+
+RESULT=$(printf '%s' "$RESPONSE" | jq -c \
+  --arg metric "$METRIC" \
+  --arg unit "$UNIT" \
+  --arg statistic "$STATISTIC" \
+  --arg cluster_identifier "$CLUSTER_IDENTIFIER" \
+  --argjson period "$PERIOD" \
+  '{
+    metric: $metric,
+    type: "gauge",
+    period_in_seconds: $period,
+    unit: $unit,
+    results: [{
+      selector: {cluster_identifier: $cluster_identifier},
+      data: ([(.Datapoints // [])[] | {timestamp: .Timestamp, value: .[$statistic]}] | sort_by(.timestamp))
+    }]
+  }')
+
+echo "$RESULT"

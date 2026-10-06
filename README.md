@@ -139,6 +139,15 @@ about permissions.
    group is built from that tag, and an untagged VPC produces an empty subnet
    list rather than an error.
 
+**Metrics need one more permission, on the agent role itself.** Metrics run on
+the agent's own credentials and never assume the permissions role, so they cost
+a single AWS call. The `documentdb-cluster` requirements module attaches a
+policy with `cloudwatch:GetMetricStatistics` on `*` to `agent_role_arn` and
+`additional_agent_role_arns`; set `attach_metrics_policy_to_agent_roles = false`
+if the agent role is managed elsewhere and already has it. The cluster agent
+association must also list `telemetry` in `channel_sources`, as
+`examples/registration/nullplatform-bindings/` does.
+
 ---
 
 ## Releasing
@@ -250,8 +259,33 @@ Starts a MongoDB container, builds the cluster image if needed, and runs the
 provisioning logic inside the real worker image. Twelve assertions, no AWS
 credentials, no nullplatform account.
 
+The metrics scripts have their own suite, with `aws` and `np` mocked:
+
+```bash
+bats documentdb-cluster/scripts/tests/aws
+tofu -chdir=documentdb-cluster/specs/requirements/aws test
+```
+
 It covers the part with the most behaviour per line and the least type safety.
 It does not cover DocumentDB — see "What the checks cover" above.
+
+---
+
+## Metrics
+
+`documentdb-cluster` only. A logical database has no CloudWatch metrics of its own, so `documentdb-database` shows none.
+
+`metric:list` and `metric:data` notifications run `scripts/aws/list_metrics` and `scripts/aws/fetch_metric` directly from `entrypoint/metric`, without `np service workflow exec` and without assuming the permissions role. `metric:data` makes one AWS call, to CloudWatch: `AWS/DocDB` with the dimension `DBClusterIdentifier = cluster_identifier`, in the region of the cluster `endpoint`, for the requested `start_time`, `end_time` and `period` (rounded up to a multiple of 60 seconds).
+
+| Metric | Statistic | Unit |
+| :---- | :---- | :---- |
+| `CPUUtilization` | Average | percent |
+| `DatabaseConnections` | Maximum | count |
+| `FreeableMemory` | Minimum | bytes |
+| `VolumeBytesUsed` | Maximum | bytes |
+| `OpcountersQuery` | Sum | count |
+
+A cluster that does not exist yet (no `cluster_identifier` or `endpoint` attribute) returns an empty series. A CloudWatch error fails the request instead of showing an empty graph. `log:*` notifications answer with no entries.
 
 ---
 

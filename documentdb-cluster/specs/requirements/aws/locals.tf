@@ -10,6 +10,10 @@ locals {
   # conventional agent role name for the cluster when not given explicitly.
   agent_role_arn = var.agent_role_arn != "" ? var.agent_role_arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/nullplatform-${var.cluster_name}-agent-role"
 
+  agent_role_names = toset([for arn in concat([local.agent_role_arn], var.additional_agent_role_arns) : regex("[^/]+$", arn)])
+
+  attach_metrics_policy = local.iam_create && var.attach_metrics_policy_to_agent_roles
+
   iam_default_tags = merge(var.iam_resource_tags_json, {
     ManagedBy = "nullplatform-custom-service-role"
     Module    = local.iam_module_name

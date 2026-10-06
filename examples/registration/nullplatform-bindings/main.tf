@@ -23,7 +23,7 @@ data "terraform_remote_state" "nullplatform" {
 }
 
 module "documentdb_cluster_agent_association" {
-  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v7.11.0"
+  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v8.3.1"
 
   nrn     = var.nrn
   api_key = var.np_api_key
@@ -42,6 +42,8 @@ module "documentdb_cluster_agent_association" {
   # the apply succeeds, the channel is created, and the FIRST action fails on a
   # path that is not in the image.
   entrypoint = "/app/pkg/documentdb-cluster/entrypoint/entrypoint"
+
+  channel_sources = ["service", "telemetry"]
 
   description = "AWS DocumentDB cluster provisioning"
 }

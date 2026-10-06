@@ -1,0 +1,17 @@
+name: tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: opentofu/setup-opentofu@v1
+      - run: sudo apt-get update && sudo apt-get install -y bats jq
+      - run: bats documentdb-cluster/scripts/tests/aws
+      - run: tofu -chdir=documentdb-cluster/specs/requirements/aws init -backend=false
+      - run: tofu -chdir=documentdb-cluster/specs/requirements/aws test
