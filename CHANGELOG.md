@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+
+### Features
+
+* metrics for the cluster in the service's metrics view: CPU, connections, freeable memory, storage used and queries
+* the requirements module grants the agent role `cloudwatch:GetMetricStatistics` so metrics show
+* the registration example subscribes the cluster agent channel to `telemetry` notifications
+
 ## [0.1.5](https://github.com/nullplatform/services-document-db/compare/v0.1.4...v0.1.5) (2026-10-02)
 
 
