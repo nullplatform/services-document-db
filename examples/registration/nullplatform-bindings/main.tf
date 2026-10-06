@@ -23,7 +23,7 @@ data "terraform_remote_state" "nullplatform" {
 }
 
 module "documentdb_cluster_agent_association" {
-  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=b70e69a99366dea5dedc0e7bd1b9960954f39b8a"
+  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v8.3.1"
 
   nrn     = var.nrn
   api_key = var.np_api_key
