@@ -9,6 +9,19 @@
 * the requirements module grants the agent role `cloudwatch:GetMetricStatistics` so metrics show
 * the registration example subscribes the cluster agent channel to `telemetry` notifications
 
+## [0.2.0](https://github.com/nullplatform/services-document-db/compare/v0.1.5...v0.2.0) (2026-10-06)
+
+
+### Features
+
+* run the worker images as a non-root user ([27e13bb](https://github.com/nullplatform/services-document-db/commit/27e13bb6599498c47e247ee18cebea20da106ef3))
+* run the worker images as a non-root user ([46a58dc](https://github.com/nullplatform/services-document-db/commit/46a58dcdfabab45d9ccb713f9b3d527ea2f631d5))
+
+
+### Bug Fixes
+
+* hand HOME to the runtime user ([00a561c](https://github.com/nullplatform/services-document-db/commit/00a561c6865abb24be9d7b19aece1a686d127863))
+
 ## [0.1.5](https://github.com/nullplatform/services-document-db/compare/v0.1.4...v0.1.5) (2026-10-02)
 
 
