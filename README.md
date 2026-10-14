@@ -194,7 +194,7 @@ amd64. CI builds both architectures.
 
 The terraform belongs in the infrastructure repo of whoever installs the
 service, not here. `examples/registration/` has all three layers ready to copy,
-with the module arguments already pinned to `tofu-modules` v7.11.0.
+with the module arguments already pinned to `tofu-modules` v8.7.0.
 
 ```bash
 cp examples/registration/common.tfvars.example common.tfvars   # then fill it in
