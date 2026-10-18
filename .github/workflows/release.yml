@@ -147,8 +147,13 @@ jobs:
             --visible-to "organization=*" \
             --format json)
           echo "$OUTPUT"
-          ARTIFACT_ID=$(echo "$OUTPUT" | jq -r '.id // empty' || true)
-          [ -z "$ARTIFACT_ID" ] && ARTIFACT_ID="registered (id unavailable)"
+          # The CLI answers with resource_id (the artifact) + resource_revision_id,
+          # same as the shared register-oci-artifact workflow reads it.
+          ARTIFACT_ID=$(echo "$OUTPUT" | jq -r '.id // .resource_id // empty' || true)
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo "::warning::artifact created but no id found in CLI output"
+            ARTIFACT_ID="registered (id unavailable)"
+          fi
           echo "artifact_id=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Append database artifact metadata to the release
