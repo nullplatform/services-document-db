@@ -6,11 +6,11 @@
 # yet — which is the expected error, not a misconfiguration.
 # ---------------------------------------------------------------------------
 
-# Authenticates the terraform run itself. Note this is a DIFFERENT concern from
-# the api_key passed to the module below: that one is written into the
-# notification channel for the agent to authenticate with at runtime. They can
-# be the same key, but they do not have to be — and the terraform key having
-# more permissions than the agent key is the normal arrangement.
+# Authenticates the terraform run itself. The agent associations below take no
+# api_key: nullplatform creates and manages each channel's credential, scoped to
+# dispatching commands to agents, so this key never reaches the agent. It must
+# be able to assign the controlplane:agent-dispatcher role (admin, ops or
+# secops).
 provider "nullplatform" {
   api_key = var.np_api_key
 }
@@ -23,10 +23,9 @@ data "terraform_remote_state" "nullplatform" {
 }
 
 module "documentdb_cluster_agent_association" {
-  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v7.11.0"
+  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v8.7.0"
 
-  nrn     = var.nrn
-  api_key = var.np_api_key
+  nrn = var.nrn
 
   service_specification_slug = data.terraform_remote_state.nullplatform.outputs.documentdb_cluster_service_specification_slug
   tags_selectors             = var.tags_selectors
@@ -47,10 +46,9 @@ module "documentdb_cluster_agent_association" {
 }
 
 module "documentdb_database_agent_association" {
-  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v7.11.0"
+  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition_agent_association?ref=v8.7.0"
 
-  nrn     = var.nrn
-  api_key = var.np_api_key
+  nrn = var.nrn
 
   service_specification_slug = data.terraform_remote_state.nullplatform.outputs.documentdb_database_service_specification_slug
   tags_selectors             = var.tags_selectors

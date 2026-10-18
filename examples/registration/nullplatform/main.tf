@@ -29,11 +29,11 @@ provider "nullplatform" {
   api_key = var.np_api_key
 }
 
-# Modules are pinned to v7.11.0 below. Terraform cannot interpolate a module
+# Modules are pinned to v8.7.0 below. Terraform cannot interpolate a module
 # source, so the ref is repeated literally in each block rather than held in a
 # variable — bump both together.
 module "service_definition_documentdb_cluster" {
-  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition?ref=v7.11.0"
+  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition?ref=v8.7.0"
 
   nrn = var.nrn
 
@@ -69,7 +69,7 @@ module "service_definition_documentdb_cluster" {
 }
 
 module "service_definition_documentdb_database" {
-  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition?ref=v7.11.0"
+  source = "github.com/nullplatform/tofu-modules//nullplatform/service_definition?ref=v8.7.0"
 
   nrn = var.nrn
 

@@ -6,7 +6,7 @@ variable "nrn" {
 variable "np_api_key" {
   type        = string
   sensitive   = true
-  description = "nullplatform API key. Used for BOTH the terraform provider and the key embedded in the notification channel for the agent. Split into two variables if the agent should hold a narrower key. Pass through TF_VAR_np_api_key; never put it in a file."
+  description = "nullplatform API key the terraform provider authenticates with. It is not embedded in the notification channels: nullplatform manages their credentials. It must be able to assign the controlplane:agent-dispatcher role. Pass through TF_VAR_np_api_key; never put it in a file."
 }
 
 variable "tags_selectors" {
