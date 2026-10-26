@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/nullplatform/services-document-db/compare/v0.2.1...v0.2.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* **deps:** bump nullplatform/scopes/worker-bridge from 2.0.3 to 2.0.6 ([2a1edda](https://github.com/nullplatform/services-document-db/commit/2a1edda9ab1aeccc715f5aeb603eecde69edf17e))
+* **deps:** bump nullplatform/scopes/worker-bridge from 2.0.3 to 2.0.6 ([bca8b8e](https://github.com/nullplatform/services-document-db/commit/bca8b8e02ccca74f759a3e51b880c57830e0bf4d))
+
 ## [0.2.1](https://github.com/nullplatform/services-document-db/compare/v0.2.0...v0.2.1) (2026-10-16)
 
 
