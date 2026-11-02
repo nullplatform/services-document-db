@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/nullplatform/services-document-db/compare/v0.2.3...v0.2.4) (2026-11-02)
+
+
+### Bug Fixes
+
+* **deps:** update dependency opentofu/opentofu to v1.13.2 ([#29](https://github.com/nullplatform/services-document-db/issues/29)) ([89b60b2](https://github.com/nullplatform/services-document-db/commit/89b60b2b71bc8b2ed492d4a40be4ea7a18b0c54c))
+
 ## [0.2.3](https://github.com/nullplatform/services-document-db/compare/v0.2.2...v0.2.3) (2026-11-02)
 
 
