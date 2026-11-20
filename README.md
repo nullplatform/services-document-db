@@ -48,6 +48,7 @@ Packaging does not change this. The worker runs wherever the agent runs.
 │   │   ├── service-spec.json.tpl   # what the developer sees when creating the service
 │   │   ├── links/connect.json.tpl  # what they see when linking an application
 │   │   └── requirements/aws/       # the IAM role the agent assumes (applied by the installer)
+│   ├── publish/                    # publishes the service as a package (release workflow only)
 │   ├── deployment/                 # the cluster itself
 │   ├── permissions/                # one MongoDB user per link (+ mongo_user.js)
 │   ├── scripts/aws/                # build_context, do_tofu, write_*_outputs
@@ -56,10 +57,6 @@ Packaging does not change this. The worker runs wherever the agent runs.
 │   ├── workflows/aws/              # create, update, delete, link, link-update, unlink
 │   └── values.yaml                 # static config, not exposed in the UI
 ├── documentdb-database/            # same shape; db_setup/ replaces deployment/
-├── examples/registration/          # ready-to-copy terraform for whoever installs this
-│   ├── aws-requirements/           # layer 0 — the IAM roles; apply FIRST
-│   ├── nullplatform/               # layer 1 — specs + packages
-│   └── nullplatform-bindings/      # layer 2 — agent associations
 └── test/                           # runs the MongoDB logic against a real mongod
 ```
 
@@ -121,9 +118,10 @@ runs in. Every nullplatform scope and service works this way.
 the package: pulling a new tag and re-registering the service changes nothing
 about permissions.
 
-1. **Apply layer 0**, `examples/registration/aws-requirements/`. It calls the
-   two requirements modules by git source and creates the IAM roles the agent
-   assumes. Its two outputs are what steps 2 and 3 below consume.
+1. **Apply the two requirements modules**, `documentdb-cluster/specs/requirements/aws`
+   and `documentdb-database/specs/requirements/aws`, at the release you install
+   (see "Install in your organization"). They create the IAM roles the agent
+   assumes; their `permissions_role_arn` outputs are what steps 2 and 3 consume.
 2. **Add both `*_assume_role_arn` outputs to the agent's `assume_role_arns`**,
    in whatever stack owns the agent. Without this, `sts:AssumeRole` is denied
    and nothing else matters.
@@ -143,39 +141,37 @@ about permissions.
 
 ## Releasing
 
-`.github/workflows/release.yml` cuts a release with release-please, builds both
-images, pushes them to `public.ecr.aws/nullplatform` as
-`services/documentdb-cluster` and `services/documentdb-database`, registers each
-one as a nullplatform `oci_image` artifact and writes both digests into the
-release body.
+`.github/workflows/release.yml` cuts a release with release-please, then runs
+the shared `actions-nullplatform/release-publish-oci.yml@v1` chain twice against
+that tag: once for the cluster (`agent-plugins/services/document-db-cluster`)
+and once for the database (`agent-plugins/services/document-db-database`, the
+second call with `existing_tag`, which skips release-please). Each call builds
+and pushes its image, registers it as a nullplatform `oci_image` artifact,
+applies its `publish/` stack (tofu-modules' `service_package_publish`), which
+publishes the service as a global package pinning the released specs and the
+image by digest, and writes its artifact row into the release body. It is all
+one chained run on purpose: release-please tags with `GITHUB_TOKEN`, and GitHub
+never triggers workflows from bot-token events.
 
-The cluster image rides the shared
-`actions-nullplatform/release-publish-oci.yml@v1` chain. The database image is
-built by an inline job against the same tag, because that chain registers one
-image per run and this repo ships two from one version. It is all one chained
-run on purpose: release-please tags with `GITHUB_TOKEN`, and GitHub never
-triggers workflows from bot-token events.
-
-Configure one secret:
+Configure:
 
 | Kind | Name | What it is |
 |---|---|---|
 | secret | `AWS_ROLE_ARN_ECR_PUSH` | Role assumed via OIDC, with `ecr:*` on the two repositories |
+| secret | `ARTIFACT_NP_API_KEY` | API key of the publishing organization (artifacts and packages); from the organization |
+| variable | `NP_ARTIFACT_NRN` | NRN of the organization that owns the artifacts |
+| organization secrets | `PACKAGE_STATE_AWS_ACCOUNT_ID`, `PACKAGE_TFSTATE_BUCKET`, `PACKAGE_TFSTATE_REGION` | where the publish stacks keep their state; the state role is `github-actions-<repository>-package-state` in that account, by convention |
 
-Nothing else. The artifact is registered by **terraform**, from the `package`
-block's `meta`, so no nullplatform key and no artifact NRN are needed in CI.
-
-The role needs a trust policy for this repository through the account's GitHub
-OIDC provider — the permission policy alone is not enough, and a missing trust
-policy fails at the very first step with
+The ECR role needs a trust policy for this repository through the account's
+GitHub OIDC provider — the permission policy alone is not enough, and a missing
+trust policy fails at the very first step with
 `Not authorized to perform sts:AssumeRoleWithWebIdentity`, before ECR is ever
 touched.
 
-Both ECR repositories must already exist — `service-documentdb-cluster` and
-`service-documentdb-database`. ECR never creates one on push, and the two
-failure messages differ: a 403 means the role's policy does not cover that
-repository, while "repository does not exist" means the name is wrong or the
-repository is genuinely absent.
+Both ECR repositories must already exist. ECR never creates one on push, and
+the two failure messages differ: a 403 means the role's policy does not cover
+that repository, while "repository does not exist" means the name is wrong or
+the repository is genuinely absent.
 
 ### Building locally
 
@@ -190,53 +186,99 @@ it explicitly: `--build-arg TARGETARCH=arm64`. A local build is for inspection
 only: it produces a single-architecture image, and the agent's nodes are usually
 amd64. CI builds both architectures.
 
-## Registering
+## Install in your organization
 
-The terraform belongs in the infrastructure repo of whoever installs the
-service, not here. `examples/registration/` has all three layers ready to copy,
-with the module arguments already pinned to `tofu-modules` v7.11.0.
+The two services are published as the packages `np-documentdb-cluster`
+(specification "AWS DocumentDB Cluster") and `np-documentdb-database`
+("AWS DocumentDB Database"), visible to every organization. You do not copy
+their specs: you install the packages and use them read-only. How installing a
+package works, how it coexists with a copy you registered, how to upgrade, and
+when to fork instead are in the [package installation guide](https://docs.nullplatform.com/docs/packages/install);
+this section has what is specific to these services.
 
-```bash
-cp examples/registration/common.tfvars.example common.tfvars   # then fill it in
-export TF_VAR_np_api_key="<key>"
+Already registered copies with the former `examples/registration/`? They keep
+working: that layer called tofu-modules' `service_definition` on specs that stay
+in every release, and the packages install next to them, as the guide explains.
 
-cd examples/registration/aws-requirements        && tofu init && tofu apply -var cluster_name="<cluster>"
-cd ../nullplatform                               && tofu init && tofu apply -var-file=../common.tfvars
-cd ../nullplatform-bindings                      && tofu init && tofu apply -var-file=../common.tfvars
-```
+Installing them touches the same three layers as registering them yourself, and
+only the nullplatform layer changes:
 
-Order matters twice over: the bindings layer reads the registered spec slugs
-out of the `nullplatform/` layer's state, and both of those are useless until
-layer 0 has created the roles and you have wired its outputs per
-"Prerequisites on the AWS side". Layer 0 takes no `common.tfvars` — it needs
-AWS credentials and a cluster name, not a nullplatform key.
+| Layer | What | Module |
+|---|---|---|
+| infrastructure (AWS credentials) | The IAM role each service assumes | [`documentdb-cluster/specs/requirements/aws`](documentdb-cluster/specs/requirements/aws), [`documentdb-database/specs/requirements/aws`](documentdb-database/specs/requirements/aws) |
+| nullplatform (nullplatform API key) | The installation of each package and its agent channel | tofu-modules' `service_package_installation` |
+| bindings | The roles under selectors `documentdb-cluster` and `documentdb-database` in your IAM provider | your `aws-iam-configuration` provider |
 
-Three arguments that look redundant and are not:
-
-- **`repository_branch` must be a tag.** The module rejects a branch name.
-- **`repository_token`** is only needed when the specs cannot be fetched
-  anonymously. The module reads the spec files over HTTPS on every apply, so if
-  the repository it reads them from requires authentication, a fine-grained
-  `Contents: Read-only` token is mandatory — and its absence fails at plan time
-  rather than at runtime. Otherwise leave it unset.
-- **`entrypoint`** must be passed explicitly. The module defaults to
-  `/app/packages/<slug>/entrypoint`; the Dockerfiles bake
-  `/app/pkg/<slug>/entrypoint/entrypoint`. They do not match, the apply succeeds
-  anyway, and the first action fails on a path that is not in the image.
-
-Finally, wire the worker on the agent — the worker does **not** inherit the
-agent's environment:
+Pick ONE release of this repository (the latest is on its [releases page](https://github.com/nullplatform/services-document-db/releases))
+and use its version everywhere below: the IAM roles are the ones the workers of
+that same release expect, and both services share the release.
 
 ```hcl
-worker_orchestrated_packages = ["containers", "documentdb-cluster", "documentdb-database"]
+# ── infrastructure layer ─────────────────────────────────────────────
+module "documentdb_cluster_requirements" {
+  source       = "git::https://github.com/nullplatform/services-document-db.git//documentdb-cluster/specs/requirements/aws?ref=vX.Y.Z"
+  cluster_name = "<nullplatform agent cluster>"
+}
+
+module "documentdb_database_requirements" {
+  source       = "git::https://github.com/nullplatform/services-document-db.git//documentdb-database/specs/requirements/aws?ref=vX.Y.Z"
+  cluster_name = "<nullplatform agent cluster>"
+}
+
+# The agent role must be allowed to assume them: add both to the
+# assume_role_arns of tofu-modules' infrastructure/aws/iam/agent.
+#   assume_role_arns = [..., module.documentdb_cluster_requirements.permissions_role_arn,
+#                            module.documentdb_database_requirements.permissions_role_arn]
+
+# ── nullplatform layer ───────────────────────────────────────────────
+# For a service the installation is the whole nullplatform side, channel included.
+module "documentdb_cluster" {
+  source = "git::https://github.com/nullplatform/tofu-modules.git//nullplatform/service_package_installation?ref=v9.16.0"
+
+  nrn                  = var.nrn
+  package_slug         = "np-documentdb-cluster"
+  package_version      = "X.Y.Z" # the same release, without the v
+  agent_tags_selectors = { cluster = "runtime" } # must match the agent's TAGS
+}
+
+module "documentdb_database" {
+  source = "git::https://github.com/nullplatform/tofu-modules.git//nullplatform/service_package_installation?ref=v9.16.0"
+
+  nrn                  = var.nrn
+  package_slug         = "np-documentdb-database"
+  package_version      = "X.Y.Z"
+  agent_tags_selectors = { cluster = "runtime" }
+}
+# Keeping channels in a separate bindings layer instead? Use
+# nullplatform/package_installation here and service_definition_agent_association
+# there, with the package slug of each.
+
+# ── bindings layer ───────────────────────────────────────────────────
+# One aws-iam-configuration per NRN and dimensions, at the account level: add
+# both entries to the list your IAM provider already has.
+#   { selector = "documentdb-cluster",  arn = module.documentdb_cluster_requirements.permissions_role_arn },
+#   { selector = "documentdb-database", arn = module.documentdb_database_requirements.permissions_role_arn }
+```
+
+Each service assumes the role it finds under its selector in the IAM provider
+closest to its NRN. To upgrade, move the release in both layers: `ref` of the
+requirements modules and `package_version` of the installations. See
+tofu-modules' [`service_package_installation`](https://github.com/nullplatform/tofu-modules/tree/main/nullplatform/service_package_installation)
+for its inputs and outputs.
+
+Prerequisites: an agent inside the VPC (see "Where the agent has to run") whose
+`TAGS` match the channels' `tags_selectors`, with both packages in its
+`worker_orchestrated_packages` (the workers then run with the agent's identity,
+the one the roles trust), and the account providers of "Prerequisites on the
+AWS side":
+
+```hcl
+worker_orchestrated_packages = ["containers", "np-documentdb-cluster", "np-documentdb-database"]
 ```
 
 `allowedRegistries` needs no change: the agent module already defaults to
 `["public.ecr.aws/nullplatform/*"]`, which is where these images are published,
-and the images are public, so the worker pods need no pull credentials. Point
-the services at a registry of your own and both of those become your problem —
-the entry has to be added (entries are **concatenated** with the default, not
-substituted for it) and the pods need a way to authenticate.
+and the images are public, so the worker pods need no pull credentials.
 
 ---
 
