@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/nullplatform/services-document-db/compare/v0.2.5...v0.3.0) (2026-11-23)
+
+
+### Features
+
+* **package:** publish both services as global packages ([e6bd4d8](https://github.com/nullplatform/services-document-db/commit/e6bd4d89b5bd87dc8a257aa1f059fbd09c130a65))
+* **package:** publish both services as global packages ([85f4e99](https://github.com/nullplatform/services-document-db/commit/85f4e995be691d55397f10fd9d46381e13b4b708))
+
 ## [0.2.5](https://github.com/nullplatform/services-document-db/compare/v0.2.4...v0.2.5) (2026-11-16)
 
 
